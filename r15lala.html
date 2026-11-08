@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>R15 HUD</title>
+<link href="https://fonts.googleapis.com/css2?family=B612+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#040605;--fg:#39ff8f}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:var(--bg);overflow:hidden;font-family:'B612 Mono',ui-monospace,monospace;color:var(--fg);user-select:none;-webkit-tap-highlight-color:transparent}
+#st{position:absolute;left:0;top:0;width:640px;height:300px;transform-origin:0 0;color:#39ff8f;font-size:16px;--sh:5px}
+#st .a{position:absolute}.lb{font-size:12px;opacity:.65}
+.pn{position:absolute;overflow:hidden}
+.pn::before{content:'';position:absolute;inset:0;border:1px solid currentColor;opacity:.45;pointer-events:none}
+.pl{position:absolute;left:5px;top:3px;font-size:9px;opacity:.65}
+.dg{display:inline-block;height:1em;overflow:hidden;vertical-align:top;line-height:1em}
+.col{display:flex;flex-direction:column;transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.col span{height:1em;line-height:1em;display:block}
+.led{display:flex;flex-direction:column}
+.sg{width:100%;height:var(--sh);margin-bottom:1px;border:1px solid currentColor;opacity:.3}.sg.on{background:currentColor;opacity:1}
+.hb{height:3px;background:currentColor;margin-top:3px;transform-origin:0 0;width:72px}
+#menu{position:fixed;bottom:calc(4px + env(safe-area-inset-bottom,0px));left:calc(4px + env(safe-area-inset-left,0px));z-index:5;display:flex;flex-direction:column-reverse;align-items:flex-start;gap:6px;max-width:92vw}
+#menu button{font:inherit;font-size:12px;color:#39ff8f;background:#0a110d;border:1px solid #2a4a38;border-radius:6px;padding:6px 8px}
+#menu button#gear{opacity:.55;font-size:11px;padding:4px 7px}#menu .p{display:none;flex-wrap:wrap;gap:6px}#menu.open .p{display:flex}
+#start{position:fixed;inset:0;z-index:9;background:#040605;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:24px}
+#start p{max-width:420px;font-size:13px;opacity:.8;line-height:1.6}#start button{font:inherit;font-size:20px;color:#04200e;background:#39ff8f;border:0;border-radius:8px;padding:12px 36px}
+</style></head><body>
+<div id="probe" style="position:fixed;left:0;top:0;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)"></div>
+<div id="start"><h2>R15 HUD</h2>
+<p>Mount the phone in landscape on the handlebar stay. With the bike upright and still, tap SET then ZERO. Settings are for when you are stopped.</p>
+<button id="go">START</button><p id="err"></p></div>
+<div id="menu"><button id="gear">SET</button><div class="p">
+<button id="zero">ZERO</button><button id="flip">FLIP L/R</button><button id="hzi">HZ: NORM</button><button id="comp">COMP: ON</button><button id="mua">MU: AUTO</button><button id="mu">MU 1.05</button><button id="wxb">WX UPDATE</button><button id="hang">HANG 4.5°</button><button id="hold">HOLD 10S</button><button id="rst">RESET MAX</button><button id="rstb">RESET BEST</button><button id="fitb">FIT 100%</button></div></div>
+<div id="st">
+
+<div class="pn" id="pHdg"><div class="a" style="left:7px;top:1px;font-size:18px"><span class="lb" style="font-size:10px">HDG</span> <span id="hdg"></span></div><div class="a lb" id="gps" style="left:7px;top:22px;font-size:9px"></div></div>
+<div class="pn" id="pCmp"><svg id="cs" class="a" width="376" height="34" viewBox="0 0 376 34" style="left:0;top:0"><g id="cg"></g><polygon id="cpt" points="188,33 182,26 194,26" fill="currentColor"/></svg></div>
+<div class="pn" id="pLim"><div class="a" style="right:8px;top:3px;font-size:15px;text-align:right">LIMIT <span id="lm"></span></div><div class="a lb" style="right:8px;top:21px;font-size:11px;text-align:right">MARGIN <span id="mg"></span></div></div>
+
+<div class="pn" id="pGG"><svg id="ggs" class="a" viewBox="0 0 166 134" style="left:0;top:0;width:100%;height:100%"></svg></div>
+<div class="pn" id="pTxt">
+<div class="a" style="left:8px;top:3px;font-size:14px">LAT G <span id="gy"></span></div>
+<div class="a" style="left:8px;top:21px;font-size:14px">LONG G <span id="gx"></span></div>
+<div class="a lb" style="left:8px;top:42px;font-size:11px;opacity:.8">BRK PK <span id="pk1"></span></div>
+<div class="a lb" style="left:8px;top:56px;font-size:11px;opacity:.8">ACC PK <span id="pk2"></span></div>
+<div class="a" style="left:8px;top:75px;font-size:14px">YAW <span id="yw"></span>°/S</div>
+<div class="a" style="left:8px;top:95px;font-size:14px">R <span id="rd"></span>M</div>
+</div>
+
+<div class="pn" id="pDial"><div id="dialIn" class="a" style="left:0;top:0;width:294px;height:205px;transform-origin:0 0">
+<svg class="a" width="294" height="205" viewBox="0 0 294 205" style="left:0;top:0"><g id="tk" stroke="currentColor"></g>
+<path d="M43 138 A104 104 0 0 1 251 138" fill="none" stroke="currentColor" stroke-opacity=".4"/>
+<g id="hz" stroke="currentColor" stroke-width="2" fill="none"><line x1="43" y1="138" x2="121" y2="138"/><line x1="173" y1="138" x2="251" y2="138"/><line x1="121" y1="108" x2="173" y2="108" stroke-opacity=".5"/><line x1="121" y1="168" x2="173" y2="168" stroke-opacity=".5"/></g>
+<polygon id="lim" points="0,0 -5,-9 5,-9" fill="#ff4a4a"/><polygon id="ptr" points="0,0 -6,-11 6,-11" fill="currentColor"/>
+<g id="bst" stroke="#ffb000" stroke-width="2"><line id="xL"/><line id="xR"/></g>
+<g id="fpm" stroke="currentColor" stroke-width="2" fill="none"><circle r="8"/><line x1="-20" y1="0" x2="-8" y2="0"/><line x1="8" y1="0" x2="20" y2="0"/><line x1="0" y1="-8" x2="0" y2="-16"/></g></svg>
+<div class="a" style="left:5px;top:146px;width:82px"><div class="lb">MAX L</div><div style="font-size:26px"><span id="mL"></span>°</div><div class="hb" id="hL"></div></div>
+<div class="a" style="left:207px;top:146px;width:82px;text-align:right"><div class="lb">MAX R</div><div style="font-size:26px"><span id="mR"></span>°</div><div class="hb" id="hR" style="margin-left:auto;transform-origin:100% 0"></div></div>
+<div class="a" style="left:89px;top:147px;width:116px;height:54px;border:1px solid currentColor;background:#040605;text-align:center;font-size:42px;line-height:52px"><span id="cur"></span>°</div>
+</div></div>
+<div class="pn" id="pStr"><div class="pl">LEAN / LONG G 10S</div><svg id="chs" class="a" width="294" height="51" viewBox="0 0 294 51" style="left:0;top:0"><line id="chz" x1="4" y1="31" x2="290" y2="31" stroke="currentColor" stroke-opacity=".3" stroke-dasharray="3 3"/><polyline id="chL" fill="none" stroke="currentColor" stroke-width="1.6"/><polyline id="chG" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 3" stroke-opacity=".85"/></svg></div>
+
+<div class="pn" id="pBar"><svg class="a" width="170" height="30" viewBox="0 0 170 30" style="left:0;top:0"><rect x="6" y="10" width="158" height="10" fill="none" stroke="currentColor" stroke-opacity=".6"/><rect id="lbf" x="85" y="12" width="0" height="6" fill="currentColor"/><line x1="85" y1="5" x2="85" y2="25" stroke="currentColor" stroke-width="1.5"/><line id="lmL" y1="6" y2="24" stroke="#ff4a4a" stroke-width="2"/><line id="lmR" y1="6" y2="24" stroke="#ff4a4a" stroke-width="2"/></svg></div>
+<div class="pn" id="pLoad">
+<div class="a lb" style="left:5px;top:3px;font-size:9px">ROLL RATE</div>
+<div class="a" style="left:5px;top:14px;font-size:12px"><span id="rr"></span>°/S</div>
+<svg class="a" style="left:4px;top:30px" width="58" height="72" viewBox="0 0 58 72"><line x1="40" y1="4" x2="40" y2="68" stroke="currentColor" stroke-opacity=".6"/><g id="rrt" stroke="currentColor"></g><polygon id="rrm" points="38,0 28,-5 28,5" fill="currentColor"/></svg>
+<div class="a lb" id="ptL" style="left:5px;top:106px;font-size:9px">PITCH</div>
+<div class="a" id="ptV" style="left:5px;top:117px;font-size:12px"><span id="pit"></span></div>
+<div class="a lb" style="left:66px;top:3px;width:48px;text-align:center;font-size:9px">F</div>
+<div class="a lb" style="left:118px;top:3px;width:48px;text-align:center;font-size:9px">R</div>
+<div class="a led" id="bF" style="left:66px;top:15px;width:48px"></div>
+<div class="a led" id="bR" style="left:118px;top:15px;width:48px"></div>
+<div class="a pcr" style="left:66px;top:125px;width:48px;text-align:center;font-size:12px"><span id="pf"></span>%</div>
+<div class="a pcr" style="left:118px;top:125px;width:48px;text-align:center;font-size:12px"><span id="pr"></span>%</div>
+</div>
+<div class="pn" id="pLog"><div class="a lb" style="left:5px;top:3px;font-size:9px">CORNER LOG</div><div class="a" style="right:5px;top:2px;font-size:10px"><span id="cb"></span></div><div class="a" id="cl" style="left:6px;top:18px;font-size:13px;line-height:20px;white-space:pre"></div></div>
+
+</div>
+<script>
+const $=i=>document.getElementById(i),NS='http://www.w3.org/2000/svg',st=$('st');
+let FIT=1,CH=286,CWm=188,LH=142;
+const box=(id,x,y,w,h)=>{const e=$(id).style;e.left=x+'px';e.top=y+'px';e.width=w+'px';e.height=h+'px'};
+function lay(W,H){
+box('pHdg',2,2,124,34);box('pLim',W-132,2,130,34);
+const cw=W-264;box('pCmp',129,2,cw,34);CWm=cw/2;
+const cs=$('cs');cs.setAttribute('width',cw);cs.setAttribute('viewBox','0 0 '+cw+' 34');$('cpt').setAttribute('points',CWm+',33 '+(CWm-6)+',26 '+(CWm+6)+',26');
+const gh=Math.round((H-44)*.5234);box('pGG',2,39,166,gh);box('pTxt',2,42+gh,166,H-2-(42+gh));
+const mw=W-346,mh=H-95;box('pDial',171,39,mw,mh);box('pStr',171,H-53,mw,51);
+const k=Math.min(mw/294,mh/205);$('dialIn').style.transform='translate('+((mw-294*k)/2)+'px,'+((mh-205*k)/2)+'px) scale('+k+')';
+CH=mw-8;const ch=$('chs');ch.setAttribute('width',mw);ch.setAttribute('viewBox','0 0 '+mw+' 51');$('chz').setAttribute('x2',mw-4);
+box('pBar',W-172,39,170,30);LH=H-158;box('pLoad',W-172,72,170,LH);box('pLog',W-172,H-83,170,81);
+st.style.setProperty('--sh',Math.max(3,(LH-32)/18-1)+'px');
+document.querySelectorAll('.pcr').forEach(e=>e.style.top=(LH-17)+'px');$('ptL').style.top=(LH-36)+'px';$('ptV').style.top=(LH-25)+'px'}
+function fit(){
+const cs=getComputedStyle($('probe')),sl=parseFloat(cs.paddingLeft)||0,sr=parseFloat(cs.paddingRight)||0,sT=parseFloat(cs.paddingTop)||0,sb=parseFloat(cs.paddingBottom)||0;
+const aw=innerWidth-sl-sr,ah=(innerHeight-sT-sb)*FIT,s=Math.min(aw/640,ah/300),W=aw/s,H=ah/s;
+st.style.width=W+'px';st.style.height=H+'px';st.style.transform='translate('+sl+'px,'+sT+'px) scale('+s+')';lay(W,H)}
+addEventListener('resize',fit);
+function roll(el,t){const sig=t.replace(/\d/g,'0');if(el.dataset.s!=sig){el.innerHTML='';el.dataset.s=sig;for(const c of t){const d=document.createElement('span');if(/\d/.test(c)){d.className='dg';const k=document.createElement('span');k.className='col';k.innerHTML='0123456789'.split('').map(n=>'<span>'+n+'</span>').join('');d.appendChild(k)}else d.textContent=c;el.appendChild(d)}}
+[...el.children].forEach((d,i)=>{const c=t[i];if(d.className=='dg')d.firstChild.style.transform='translateY(-'+(+c)+'em)';else d.textContent=c})}
+const el_=(n,a,p)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
+const ln=(p,a)=>el_('line',a,p);
+const rad=a=>a*Math.PI/180;
+const CX=147,CY=138,R=104,TS=3.6;
+for(let a=-60;a<=60;a+=5){const M=a%30==0,m=a%10==0,l=M?16:m?10:5;ln($('tk'),{x1:CX+R*Math.sin(rad(a)),y1:CY-R*Math.cos(rad(a)),x2:CX+(R+l)*Math.sin(rad(a)),y2:CY-(R+l)*Math.cos(rad(a)),'stroke-width':M?2.5:1.2})}
+const cg=$('cg'),NM=['N','NE','E','SE','S','SW','W','NW'];
+for(let d=-360;d<=1080;d+=5){const x=d*TS,M=d%45==0,m=d%15==0,l=M?13:m?8:5,dd=((d%360)+360)%360;ln(cg,{x1:x,y1:16,x2:x,y2:16+l,stroke:'currentColor','stroke-width':M?2:1});
+if(M){const t=el_('text',{x:x,y:12,'font-size':dd==0?14:11,'text-anchor':'middle',fill:'currentColor'},cg);t.textContent=NM[dd/45]}}
+const GC=[83,68],GR=56,GS=GR/1.2,gs=$('ggs');
+el_('circle',{cx:GC[0],cy:GC[1],r:GR,fill:'none',stroke:'currentColor','stroke-opacity':.7},gs);
+for(let a=0;a<360;a+=10){const l=a%30==0?7:4,s=Math.sin(rad(a)),c=Math.cos(rad(a));ln(gs,{x1:GC[0]+GR*s,y1:GC[1]-GR*c,x2:GC[0]+(GR-l)*s,y2:GC[1]-(GR-l)*c,stroke:'currentColor','stroke-opacity':.7})}
+[.4,.8].forEach(g=>el_('circle',{cx:GC[0],cy:GC[1],r:GS*g,fill:'none',stroke:'currentColor','stroke-opacity':.25},gs));
+ln(gs,{x1:GC[0]-GR,y1:GC[1],x2:GC[0]+GR,y2:GC[1],stroke:'currentColor','stroke-opacity':.4});
+ln(gs,{x1:GC[0],y1:GC[1]-GR,x2:GC[0],y2:GC[1]+GR,stroke:'currentColor','stroke-opacity':.4});
+const gmu=el_('circle',{cx:GC[0],cy:GC[1],r:GS,fill:'none',stroke:'currentColor','stroke-dasharray':'3 3','stroke-opacity':.85},gs);
+const gtr=el_('polyline',{fill:'none',stroke:'currentColor','stroke-width':1.2,'stroke-opacity':.7},gs);
+const gdt=el_('circle',{cx:GC[0],cy:GC[1],r:4,fill:'currentColor'},gs);
+[['G-G',4,10,'start'],['ACC',83,10,'middle'],['BRK',83,131,'middle']].forEach(a=>{const t=el_('text',{x:a[1],y:a[2],'font-size':9,'text-anchor':a[3],fill:'currentColor','fill-opacity':.65},gs);t.textContent=a[0]});
+const mut=el_('text',{x:162,y:11,'font-size':11,'text-anchor':'end',fill:'currentColor'},gs),mul=el_('text',{x:162,y:21,'font-size':8,'text-anchor':'end',fill:'currentColor','fill-opacity':.75},gs);
+for(let k=0;k<=8;k++){const y=4+k*8,l=k==4?12:6;ln($('rrt'),{x1:40,y1:y,x2:40+l,y2:y,'stroke-width':k==4?2:1})}
+for(const id of['bF','bR'])for(let i=0;i<18;i++){const s=document.createElement('div');s.className='sg';$(id).appendChild(s)}
+const P={mu:1.05,auto:1,hang:4.5,hold:10,sign:1,hz:1,comp:1,fs:.48,hl:.47,Ltan:1.325*Math.tan(rad(25.65))};
+const S={u:[0,1,0],u0:null,w:[0,0,0],a:[0,0,0],v:null,glat:null,glon:null,gh:null,ght:0,mh:null,mht:0,off:null,hd:null,hsrc:'--',lean:0,lat:0,lon:0,mL:0,mR:0,tL:0,tR:0,bL:0,bR:0,pb:0,pa:0,rr:0,pl:0,pit:0,yaw:0,rad:null,t:0,over:false,bl:0,run:false,cs:0,csd:'R',cpk:0,ct:0,log:[],hl:[],hg:[],tr:[],wf:1,wlab:'NO WX',wxT:null,wxLat:null,wxLon:null,wxBusy:0};
+try{const b=JSON.parse(localStorage.getItem('r15best')||'{}');S.bL=b.L||0;S.bR=b.R||0}catch(e){}
+const sv=()=>{try{localStorage.setItem('r15best',JSON.stringify({L:S.bL,R:S.bR}))}catch(e){}};
+const angd=(a,b)=>((a-b+540)%360)-180;
+function onOri(e){if(e.beta==null)return;S.seen=1;const b=rad(e.beta),g=rad(e.gamma||0);S.u=[-Math.cos(b)*Math.sin(g),Math.sin(b),Math.cos(b)*Math.cos(g)];if(!S.u0)S.u0=S.u.slice()}
+function onAbs(e){if(e.alpha==null||e.beta==null)return;const a=rad(e.alpha),b=rad(e.beta),g=rad(e.gamma||0);
+const ex=Math.cos(a)*Math.sin(g)+Math.sin(a)*Math.sin(b)*Math.cos(g),ey=Math.sin(a)*Math.sin(g)-Math.cos(a)*Math.sin(b)*Math.cos(g);
+S.mh=(Math.atan2(-ex,-ey)*180/Math.PI+360)%360;S.mht=Date.now()}
+function onMot(e){const a=e.acceleration,r=e.rotationRate;if(a&&a.x!=null)S.a=[a.x,a.y,a.z];if(r&&r.alpha!=null)S.w=[rad(r.beta),rad(r.gamma),rad(r.alpha)]}
+function estMu(w){
+const T=w.T,RH=Math.max(1,w.RH),g=Math.log(RH/100)+17.62*T/(243.12+T),Td=243.12*g/(17.62-g);
+const tau=T>25?1.5:(RH>85||T<8)?3.5:2.5;
+let W=0;w.h.forEach(x=>{W+=x.p*Math.exp(-x.age/tau)});
+const rate=Math.max(w.pNow,w.hLast),snowCode=[71,73,75,77,85,86].indexOf(w.code)>=0,snowNow=w.snow>0||snowCode||(T<=2&&w.hSn>0);
+let f=1,lab='DRY';
+if(rate>=4||w.code>=95){f=.5;lab='HEAVY'}
+else if(rate>=1){f=.62;lab='WET'}
+else if(rate>.1){f=.7;lab='WET'}
+else if(W>=1.5){f=.72;lab='WET'}
+else if(W>=.5){f=.82;lab='DAMP'}
+else if(W>=.15){f=.9;lab='DAMP'}
+if(snowNow&&T<=3){f=Math.min(f,.3);lab='SNOW'}
+if([56,57,66,67].indexOf(w.code)>=0){f=Math.min(f,.25);lab='ICE'}
+if(T<=0&&(W>=.15||RH>=85||rate>0)){f=Math.min(f,.25);lab='ICE'}
+else if(T<=3&&(Td>=T-1.5||RH>=92)&&lab=='DRY'){f=Math.min(f,.5);lab='FROST'}
+if(T<10)f*=.9+.01*Math.max(0,T);
+return{f:Math.round(f*100)/100,lab}}
+async function wx(){
+if(S.glat==null||S.wxBusy)return;S.wxBusy=1;
+try{
+const u='https://api.open-meteo.com/v1/forecast?latitude='+S.glat.toFixed(3)+'&longitude='+S.glon.toFixed(3)+'&current=temperature_2m,relative_humidity_2m,precipitation,snowfall,weather_code&hourly=precipitation,snowfall&past_hours=6&forecast_hours=1&timeformat=unixtime&timezone=GMT';
+const r=await fetch(u);if(!r.ok)throw 0;const j=await r.json(),c=j.current,h=j.hourly,ns=Date.now()/1000,list=[];
+h.time.forEach((t,i)=>{if(t<=ns+60)list.push({age:Math.max(0,(ns-(t-1800))/3600),p:h.precipitation[i]||0,sn:h.snowfall[i]||0})});
+const last=list.length?list[list.length-1]:{p:0,sn:0};
+const m=estMu({T:c.temperature_2m,RH:c.relative_humidity_2m,pNow:c.precipitation||0,snow:c.snowfall||0,code:c.weather_code||0,h:list,hLast:last.p,hSn:last.sn});
+S.wf=m.f;S.wlab=m.lab;S.wxT=Date.now();S.wxLat=S.glat;S.wxLon=S.glon}catch(e){}
+S.wxBusy=0}
+function wxTick(){if(!S.run||S.glat==null)return;const old=S.wxT==null||Date.now()-S.wxT>600000;
+const dx=S.wxLat==null?0:Math.hypot((S.glat-S.wxLat)*111,(S.glon-S.wxLon)*111*Math.cos(rad(S.glat)));
+if(old||dx>3)wx()}
+async function go(){try{
+if(typeof DeviceOrientationEvent!=='undefined'&&DeviceOrientationEvent.requestPermission){const r=await DeviceOrientationEvent.requestPermission();if(r!=='granted')throw new Error('Motion sensors permission needed');if(DeviceMotionEvent.requestPermission)await DeviceMotionEvent.requestPermission()}
+addEventListener('deviceorientation',onOri);addEventListener('deviceorientationabsolute',onAbs,true);addEventListener('devicemotion',onMot);
+try{navigator.wakeLock&&await navigator.wakeLock.request('screen')}catch(e){}
+if(navigator.geolocation)navigator.geolocation.watchPosition(p=>{const c=p.coords;S.v=c.speed;S.glat=c.latitude;S.glon=c.longitude;if(c.heading!=null&&!isNaN(c.heading)&&c.speed>2){S.gh=c.heading;S.ght=Date.now()}},()=>{S.v=null},{enableHighAccuracy:true,maximumAge:0});
+$('start').style.display='none';S.run=true;try{const d=document.documentElement;if(d.requestFullscreen)await d.requestFullscreen({navigationUI:'hide'})}catch(e){}try{screen.orientation&&screen.orientation.lock&&await screen.orientation.lock('landscape')}catch(e){}setTimeout(()=>{if(!S.seen){$('start').style.display='flex';$('err').textContent='No sensor data. Open the https link in Chrome, not a downloaded file.'}},2500)}catch(e){$('err').textContent=e.message||'Sensors unavailable'}}
+$('go').onclick=go;
+$('gear').onclick=()=>$('menu').classList.toggle('open');
+$('zero').onclick=()=>{S.u0=S.u.slice();S.mL=S.mR=0};
+$('flip').onclick=()=>{P.sign*=-1};
+$('hzi').onclick=()=>{P.hz*=-1;$('hzi').textContent='HZ: '+(P.hz==1?'NORM':'INV')};
+$('comp').onclick=()=>{P.comp=P.comp==1?-1:P.comp==-1?0:1;$('comp').textContent='COMP: '+(P.comp==1?'ON':P.comp==-1?'INV':'OFF')};
+$('mua').onclick=()=>{P.auto^=1;$('mua').textContent='MU: '+(P.auto?'AUTO':'MAN')};
+$('mu').onclick=()=>{P.mu=P.mu>=1.3?.85:+(P.mu+.05).toFixed(2);$('mu').textContent='MU '+P.mu.toFixed(2)};
+$('wxb').onclick=()=>{S.wxT=null;wx()};
+$('hang').onclick=()=>{P.hang=P.hang>=6?0:P.hang+1.5;$('hang').textContent='HANG '+P.hang+'°'};
+$('hold').onclick=()=>{P.hold=P.hold==5?10:P.hold==10?30:5;$('hold').textContent='HOLD '+P.hold+'S'};
+$('rst').onclick=()=>{S.mL=S.mR=0;S.pb=S.pa=0};$('rstb').onclick=()=>{S.bL=S.bR=0;sv()};$('fitb').onclick=()=>{FIT=FIT==1?.92:FIT==.92?.85:1;$('fitb').textContent='FIT '+Math.round(FIT*100)+'%';fit()};
+const lp=(a,b,k)=>a+(b-a)*k,p2=n=>String(Math.round(n)).padStart(2,'0'),p3=n=>String(Math.min(999,Math.round(n))).padStart(3,'0'),sg=(x,d)=>(x<0?'-':'+')+Math.abs(x).toFixed(d);
+function frame(){
+const u=S.u,u0=S.u0||[0,1,0],tn=performance.now(),dt=Math.min(.1,(tn-(S.t||tn))/1000);S.t=tn;
+let raw=Math.atan2(u0[0]*u[1]-u0[1]*u[0],u0[0]*u[0]+u0[1]*u[1])*180/Math.PI*P.sign;
+const v=S.v,w=S.w[0]*u[0]+S.w[1]*u[1]+S.w[2]*u[2];
+let cor=0;if(P.comp&&v>3)cor=Math.max(-8,Math.min(8,P.Ltan*w/v*180/Math.PI))*P.comp*P.sign;
+S.lean=lp(S.lean,raw-cor,.25);
+S.rr=lp(S.rr,dt>0?(S.lean-S.pl)/dt:0,.15);S.pl=S.lean;
+const cl_=x=>Math.max(-1,Math.min(1,x)),pit=(Math.asin(cl_(u[2]))-Math.asin(cl_(u0[2])))*180/Math.PI;S.pit=lp(S.pit,pit,.15);
+S.yaw=lp(S.yaw,Math.abs(w)*180/Math.PI,.2);S.rad=(v!=null&&v>3&&Math.abs(w)>.03)?v/Math.abs(w):null;
+const nowMs=Date.now(),mv=S.mh!=null&&nowMs-S.mht<2000;
+if(mv&&S.gh!=null&&v!=null&&v>3&&S.yaw<8&&nowMs-S.ght<3000){const d=angd(S.gh,S.mh);S.off=S.off==null?d:angd(S.off+angd(d,S.off)*.02,0)}
+let tg=null;
+if(mv){tg=(S.mh+(S.off||0)+360)%360;S.hsrc=S.off==null?'MAG':'MAG+GPS'}
+else if(S.gh!=null&&nowMs-S.ght<5000){tg=S.gh;S.hsrc='GPS'}
+if(tg!=null)S.hd=S.hd==null?tg:(S.hd+angd(tg,S.hd)*.15+360)%360;
+const hn=Math.hypot(u[0],u[1])||1,lat=(S.a[0]*-u[1]+S.a[1]*u[0])/hn/9.81*P.sign,lon=-S.a[2]/9.81;
+S.lat=lp(S.lat,lat,.2);S.lon=lp(S.lon,lon,.2);
+const wage=S.wxT==null?null:(nowMs-S.wxT)/60000,wxOk=wage!=null&&wage<45,muE=(P.auto&&wxOk)?P.mu*S.wf:P.mu;
+const ay=Math.abs(S.lat),ax=S.lon,Ff=Math.max(.08,P.fs-P.hl*ax),Fr=Math.max(.08,1-P.fs+P.hl*ax);
+const Lf=Math.hypot(ax<0?-ax:0,P.fs*ay)/(muE*Ff)*100,Lr=Math.hypot(ax>0?ax:0,(1-P.fs)*ay)/(muE*Fr)*100,L=Math.max(Lf,Lr);
+const b=S.lean,a=Math.abs(b),now=nowMs,lim=Math.max(0,Math.round(Math.atan(muE)*180/Math.PI-P.hang));
+if(S.run){if(b<0&&a>=S.mL){S.mL=a;S.tL=now}if(b>0&&a>=S.mR){S.mR=a;S.tR=now}
+if(b<0&&a>S.bL){S.bL=a;sv()}if(b>0&&a>S.bR){S.bR=a;sv()}
+if(ax<0)S.pb=Math.max(S.pb,-ax);if(ax>0)S.pa=Math.max(S.pa,ax);
+const sd=b>0?'R':'L';
+if(!S.cs){if(a>12){S.cs=1;S.csd=sd;S.cpk=a;S.ct=now}}
+else{S.cpk=Math.max(S.cpk,a);if(a<8||(a>3&&sd!=S.csd)){const du=(now-S.ct)/1000;if(du>=1){S.log.unshift({pk:S.cpk,d:du,s:S.csd});S.log.length=Math.min(S.log.length,3)}S.cs=0}}}
+const fl=t=>Math.max(0,1-(now-t)/(P.hold*1000));
+if(S.mL&&!fl(S.tL)){S.mL=b<0?a:0;S.tL=now}if(S.mR&&!fl(S.tR)){S.mR=b>0?a:0;S.tR=now}
+const col=L>95?'#ff4a4a':L>85?'#ff9a2e':L>60?'#ffe14a':'#39ff8f';st.style.color=col;S.over=L>95;
+const pos=(deg,len)=>[CX+len*Math.sin(rad(deg)),CY-len*Math.cos(rad(deg))];
+$('ptr').setAttribute('transform','translate('+pos(b,R)+') rotate('+(180+b)+')');
+$('lim').setAttribute('transform','translate('+pos(lim,R+18)+') rotate('+(180+lim)+')');
+[['xL',-S.bL],['xR',S.bR]].forEach(([id,d])=>{const p1=pos(d,R-8),p2_=pos(d,R+18);const e=$(id);e.setAttribute('x1',p1[0]);e.setAttribute('y1',p1[1]);e.setAttribute('x2',p2_[0]);e.setAttribute('y2',p2_[1])});
+$('hz').setAttribute('transform','rotate('+(-b*P.hz)+' '+CX+' '+CY+')');
+$('fpm').setAttribute('transform','translate('+(CX+S.lat*P.sign*40)+','+(CY-ax*50)+')');
+const bx=Math.max(-77,Math.min(77,b/60*77)),lx=Math.min(77,lim/60*77);
+$('lbf').setAttribute('x',bx>=0?85:85+bx);$('lbf').setAttribute('width',Math.abs(bx));
+$('lmL').setAttribute('x1',85-lx);$('lmL').setAttribute('x2',85-lx);$('lmR').setAttribute('x1',85+lx);$('lmR').setAttribute('x2',85+lx);
+$('rrm').setAttribute('transform','translate(0,'+(36-cl_(S.rr/80)*32)+')');
+gmu.setAttribute('r',Math.min(GR*1.06,muE*GS));
+mut.textContent='\u03bc'+muE.toFixed(2);mul.textContent=!P.auto?'MAN':(wxOk?S.wlab+' '+Math.round(wage)+'M':'NO WX');
+const n=v=>Math.round(Math.min(v,100)/100*18);
+[['bF',Lf],['bR',Lr]].forEach(([id,v])=>[...$(id).children].forEach((s,i)=>s.classList.toggle('on',17-i<n(v))));
+roll($('pf'),p3(Lf));roll($('pr'),p3(Lr));
+roll($('cur'),p2(a));roll($('lm'),p2(lim));roll($('mg'),p2(Math.max(0,lim-a)));
+roll($('mL'),p2(S.mL));roll($('mR'),p2(S.mR));
+roll($('gy'),Math.abs(S.lat).toFixed(2));roll($('gx'),sg(ax,2));
+roll($('pk1'),S.pb.toFixed(2));roll($('pk2'),S.pa.toFixed(2));
+roll($('yw'),p3(S.yaw));roll($('rd'),S.rad==null||S.rad>999?'---':p3(S.rad));
+roll($('hdg'),S.hd==null?'---':p3(Math.round(S.hd)%360));
+$('cg').setAttribute('transform','translate('+(CWm-(S.hd||0)*TS)+',0)');
+$('gps').textContent=(v==null?'GPS --':'GPS '+p3(v*3.6)+'KMH')+' '+S.hsrc;
+roll($('rr'),(S.rr<0?'-':'+')+p2(Math.min(99,Math.abs(S.rr))));
+roll($('pit'),sg(S.pit,1)+'°');
+$('hL').style.transform='scaleX('+(S.mL?fl(S.tL):0)+')';$('hR').style.transform='scaleX('+(S.mR?fl(S.tR):0)+')';
+const rows=[];if(S.cs)rows.push('>'+p2(S.cpk)+'° '+((now-S.ct)/1000).toFixed(1)+'S '+S.csd);
+S.log.forEach(l=>rows.push(p2(l.pk)+'° '+l.d.toFixed(1)+'S '+l.s));
+$('cl').textContent=rows.slice(0,3).join('\n');
+$('cb').textContent='BEST L'+p2(S.bL)+' R'+p2(S.bR);
+requestAnimationFrame(frame)}
+setInterval(()=>{S.bl^=1;st.style.opacity=S.over&&S.bl?.35:1},320);
+setInterval(()=>{
+const x=GC[0]+Math.max(-GR*1.1,Math.min(GR*1.1,S.lat*GS)),y=GC[1]-Math.max(-GR*1.1,Math.min(GR*1.1,S.lon*GS));
+S.tr.push(x.toFixed(1)+','+y.toFixed(1));if(S.tr.length>60)S.tr.shift();
+gtr.setAttribute('points',S.tr.join(' '));gdt.setAttribute('cx',x);gdt.setAttribute('cy',y)},50);
+setInterval(()=>{
+S.hl.push(S.lean);S.hg.push(S.lon);if(S.hl.length>100){S.hl.shift();S.hg.shift()}
+const mk=(arr,k)=>arr.map((v,i)=>(4+i*CH/99).toFixed(1)+','+(31-Math.max(-1,Math.min(1,v/k))*16).toFixed(1)).join(' ');
+$('chL').setAttribute('points',mk(S.hl,60));$('chG').setAttribute('points',mk(S.hg,1))},100);
+setInterval(wxTick,30000);
+fit();frame();
+</script></body></html>
